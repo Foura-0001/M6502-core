@@ -1,11 +1,17 @@
 #include <iostream>
 #include "Bus.h"
 #include "fra6502.h"
+#include<chrono>
+#include<fstream>
+#include<vector>
+#include<algorithm>
 
 //std::string instructions(std::string) //reads instructions as string from file.
 //{
 //	bool eof = false;
 //}
+const uint16_t ITERATIONS = 100;
+const uint16_t WARMUP = 4;
 
 void static printeffect(const fra6502& cpu) //prints the results of an input to the console.
 {
@@ -19,29 +25,63 @@ void static printeffect(const fra6502& cpu) //prints the results of an input to 
 
 
 
+
 int main()
 {
 	Bus bus;
+	
 
-	//uint16_t offset = 0x8000;
-	//bus.write(offset++, 0xA9);
-	//bus.write(offset++, 0x0A);
-	//bus.write(offset++, 0x8D);
-	//bus.write(offset++, 0x00);
-	//bus.write(offset++, 0x00);
+	//implement file reading and ram initialization 
+	double counter = 0;
+	//std::vector <double> MHz;
 
-	//bus.ram[0xFFFC] = 0x00;
-	//bus.ram[0xFFFD] = 0x80;
+	
 
-	bus.cpu.reset();
+	for (int i = 0; i < ITERATIONS; i++) {
+		
+		std::ifstream f("6502_functional_test.bin", std::ios::binary);
+		bool ok = f.is_open();
+		if (ok == false)
+		{
+			std::cout << " cant open file " << '\n';
+			return 1;
+		}
+		f.read(reinterpret_cast<char*>(bus.ram.data()), bus.ram.size());
 
-	for (int i = 0; i < 20; i++)
-	{
+		if (bus.ram.size() != f.gcount())
+		{
+			std::cout << " short read " << '\n';
+			return 1;
+		}
 
-		bus.cpu.clock();
-		printeffect(bus.cpu);
+		if (!(bus.ram[0x0400] == 0xD8 && bus.ram[0x0401] == 0xA2 && bus.ram[0x0402] == 0xFF))
+		{
+			std::cout << "incorrect read" << '\n';
+			return 1;
+		}
+
+		bus.cpu.reset();
+		bus.cpu.pc = 0x0400;
+
+
+		auto start = std::chrono::steady_clock::now();
+		
+		while (!bus.cpu.clock())
+		{
+			counter++;
+		}
+		auto end = std::chrono::steady_clock::now();
+		std::chrono::duration<double> elapsed = end - start;
+		if (i > WARMUP) {
+			//MHz.push_back();
+			std::cout << "Emulation Speed: " << (((counter / elapsed.count())) / 1'000'000.0) << " MHz at ith value \n";
+		}
+		
+		counter = 0;
 	}
-	std::cout << "RAM at $0000: 0x" << (int)bus.ram[0x0000] << "\n";
-
+	
+	std::cout << std::hex
+		<< "pc: 0x" << bus.cpu.pc << '\n';
+	
 	return 0;
 }

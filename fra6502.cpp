@@ -43,12 +43,12 @@ void fra6502::write(uint16_t a, uint8_t d)
 	bus->write(a, d);
 }
 
-void fra6502::clock()
+bool fra6502::clock()
 {
 	if (cycles == 0)
 	{
 		opcode = read(pc);
-
+		uint16_t old = pc;
 		pc++;
 
 		// Get Starting number of cycles
@@ -62,10 +62,18 @@ void fra6502::clock()
 
 		SetFlag(U, true);
 
+		cycles--;
+		if (pc == old)
+		{
+			return true;
+		}
+		return false;
+
 	}
 
 
 	cycles--;
+	return false;
 }
 
 
@@ -292,9 +300,34 @@ void fra6502::nmi()
 	cycles = 8;
 }
 
+//hex to decimal function defining
+uint8_t fra6502::hextodecimal(uint8_t hex)
+{
+	if (hex > 0x09)
+	{
+		uint8_t decimal = 0x10 + (hex - 0x0A);
+		internalC = true;
+		return decimal;
+	}
+	internalC = false;
+	return hex;
+}
+
 uint8_t fra6502::ADC()
 {
 	fetch();
+	if (GetFlag(D))
+	{
+		uint8_t lowN = 0x0F & fetched;
+		uint8_t highN = (0xF0 & fetched) >> 4;
+		lowN = lowN + (a & 0x0F) + GetFlag(C);
+		lowN = fra6502::hextodecimal(lowN);
+		highN = highN + ((a & 0xF0) >>4 ) + internalC;
+		highN = fra6502::hextodecimal(highN);
+		SetFlag(C, internalC);
+		a = ((highN & 0x0F) << 4) + (lowN & 0x0F);
+		return 1;
+	}
 	uint16_t temp = a + (uint16_t)fetched + (uint16_t)GetFlag(C);
 
 	SetFlag(C, temp > 255);
@@ -308,6 +341,18 @@ uint8_t fra6502::ADC()
 uint8_t fra6502::SBC()
 {
 	fetch();
+	if (GetFlag(D))
+	{
+		uint8_t lowN = fra6502::hextodecimal(0x09-(0x0F & fetched));
+		uint8_t highN = fra6502::hextodecimal(0x09-((0xF0 & fetched) >> 4));
+		lowN =  (a & 0x0F) + lowN  + GetFlag(C);
+		lowN = fra6502::hextodecimal(lowN);
+		highN = highN + ((a & 0xF0) >> 4) + internalC;
+		highN = fra6502::hextodecimal(highN);
+		SetFlag(C, internalC);
+		a = ((highN & 0x0F) << 4) + (lowN & 0x0F);
+		return 1;
+	}
 	uint16_t value = ((uint16_t)fetched) ^ 0x00FF;
 
 	// Code from ADC works here
@@ -450,7 +495,7 @@ uint8_t fra6502::BPL()
 
 uint8_t fra6502::BRK()
 {
-	SetFlag(I, 1);
+	SetFlag(U, 1);
 	write(0x0100 + stkp, (pc >> 8) & 0x00FF);
 	stkp--;
 	write(0x0100 + stkp, pc & 0x00FF);
@@ -461,6 +506,7 @@ uint8_t fra6502::BRK()
 	write(0x0100 + stkp, status);
 	stkp--;
 	SetFlag(B, 0);
+	SetFlag(I, 1);
 	
 	pc = (uint16_t)read(0xFFFE) | ((uint16_t)read(0xFFFF) << 8);
 	return 0;

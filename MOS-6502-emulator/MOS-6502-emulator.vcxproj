@@ -147,6 +147,9 @@
     <ClInclude Include="..\Bus.h" />
     <ClInclude Include="..\fra6502.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\6502_functional_test.bin" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

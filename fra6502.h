@@ -63,11 +63,12 @@ public:
 
 	uint8_t XXX();
 
-	void clock();
+	bool clock();
 	void reset();
 	void irq();
-	void nmi(); 
-	
+	void nmi();
+	uint8_t hextodecimal(uint8_t hex);
+	bool internalC = false;
 	
 
 

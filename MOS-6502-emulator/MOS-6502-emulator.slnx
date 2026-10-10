@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="MOS-6502-emulator.vcxproj" />
+  <Project Path="MOS-6502-emulator.vcxproj" Id="d1b657e8-2d36-4cc8-8ec1-9cde918c959b" />
 </Solution>
